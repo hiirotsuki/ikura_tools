@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <libgen.h>
 
 #pragma pack(push, 1)
 typedef struct
@@ -45,7 +46,7 @@ int main(int argc, char *argv[])
 	FILE *archive_file, *out_file;
 	uint8_t *header_buf, *filelist_buf;
 	const uint8_t sig[] = {'S','M','2','M','P','X','1','0'};
-	char tmpname[13];
+	char *directory_path, *out_path_filename;
 
 	if(argc < 2)
 		exit(1);
@@ -58,6 +59,8 @@ int main(int argc, char *argv[])
 	}
 
 	archive_file = fopen(argv[1], "rb");
+
+	directory_path = dirname(argv[1]);
 
 	fread(header_buf, sizeof(sm2mpx10_header), 1, archive_file);
 
@@ -89,17 +92,25 @@ int main(int argc, char *argv[])
 		printf("name: %.12s, size: %u, offset: %u\n", e->name, e->size, e->offset);
 #endif
 
-		/* sigh... */
-		memcpy(tmpname, e->name, 12);
-		tmpname[13] = '\0';
+		out_path_filename = malloc(strlen(directory_path) + 13);
+
+		if(!out_path_filename) {
+			puts("malloc failure");
+			exit(1);
+		}
+
+		strcpy(out_path_filename, directory_path);
+		strcat(out_path_filename, "/");
+		strncat(out_path_filename, e->name, 12);
 
 		/* write each file */
-		out_file = fopen(tmpname, "wb");
+		out_file = fopen(out_path_filename, "wb");
 		fseek(archive_file, e->offset, SEEK_SET);
 
 		for(j = 0; j < e->size; j++) {
 			(void)fputc(fgetc(archive_file), out_file);
 		}
+		free(out_path_filename);
 		fclose(out_file);
 	}
 
