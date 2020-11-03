@@ -21,6 +21,10 @@
 #include <string.h>
 #include <libgen.h>
 
+#if __GNUC__ > 6
+#pragma scalar_storage_order little-endian
+#endif
+
 #pragma pack(push, 1)
 typedef struct
 {
